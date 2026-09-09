@@ -9,6 +9,7 @@ interface CarState {
   rpm: number;
   gear: number;         // 1–8
   steerAngle: number;   // -1 to 1
+  lateralOffset: number;
   throttle: number;     // 0–1
   brake: number;        // 0–1
   lapTime: number;
@@ -39,7 +40,18 @@ const RPM_SHIFT_UP   = 13200;
 const RPM_SHIFT_DOWN = 5500;
 const GEAR_RATIOS = [0, 3.6, 2.6, 1.95, 1.52, 1.22, 1.0, 0.85, 0.75];
 // top speed (km/h) reachable in each gear — index 1..8
-const GEAR_TOP_SPEED = [0, 65, 105, 150, 195, 240, 285, 315, 340];
+const GEAR_TOP_SPEED = [0, 95, 140, 180, 220, 260, 300, 330, 360];
+// Comprimento aproximado do circuito em metros. A distância do carro é
+// acumulada em metros para que o mapa não complete voltas em alta velocidade.
+const TRACK_LENGTH = 5200;
+
+// Curvatura do traçado em função da distância percorrida. O sinal indica
+// esquerda/direita e a intensidade indica o quanto é necessário esterçar.
+function trackCurve(distance: number) {
+  // Curvas longas e suaves, sem a oscilação de alta frequência que dava
+  // aparência de uma "cobra" na frente do piloto.
+  return clamp(Math.sin(distance / 680) * 0.62 + Math.sin(distance / 1250) * 0.18, -1, 1);
+}
 
 function formatLap(s: number) {
   if (s === 0) return "--:--.---";
@@ -71,7 +83,7 @@ function SteeringWheel({ angle, rpm, gear, speed, drs, pitLimiter }: { angle: nu
       <circle cx={x} cy={y} r="9" fill="#0a0a0c" stroke="#333" strokeWidth="1.5" />
       <circle cx={x} cy={y} r="6.5" fill={c} />
       <circle cx={x - 2} cy={y - 2} r="2" fill="rgba(255,255,255,0.35)" />
-      {label && <text x={x} y={y + 21} textAnchor="middle" fill="#556170" fontSize="7" fontFamily="Rajdhani,sans-serif" fontWeight="600">{label}</text>}
+      {label && <text x={x} y={y + 21} textAnchor="middle" fill="#b8c4d0" fontSize="7" fontFamily="Rajdhani,sans-serif" fontWeight="600">{label}</text>}
     </g>
   );
 
@@ -86,14 +98,14 @@ function SteeringWheel({ angle, rpm, gear, speed, drs, pitLimiter }: { angle: nu
       })}
       <line x1={x} y1={y} x2={x} y2={y - 13} stroke="#e8230a" strokeWidth="2.5" strokeLinecap="round" transform={`rotate(40 ${x} ${y})`} />
       <circle cx={x} cy={y} r="4" fill="#1a1a1a" />
-      <text x={x} y={y + 32} textAnchor="middle" fill="#556170" fontSize="7.5" fontFamily="Rajdhani,sans-serif" fontWeight="700" letterSpacing="1">{label}</text>
+      <text x={x} y={y + 32} textAnchor="middle" fill="#b8c4d0" fontSize="7.5" fontFamily="Rajdhani,sans-serif" fontWeight="700" letterSpacing="1">{label}</text>
     </g>
   );
 
   return (
     <div className="flex items-center justify-center" style={{ perspective: 850 }}>
-      <svg
-        width="290" height="255"
+        <svg
+        width="370" height="325"
         viewBox="-170 -150 340 300"
         style={{
           transform: `rotateX(20deg) rotate(${rot}deg)`,
@@ -104,8 +116,8 @@ function SteeringWheel({ angle, rpm, gear, speed, drs, pitLimiter }: { angle: nu
         {/* ── PADDLE SHIFTERS (behind, carbon) ── */}
         <path d="M -128,44 L -150,52 L -150,92 L -120,80 Z" fill="#15181d" stroke="#2a2f38" strokeWidth="1.5" />
         <path d="M 128,44 L 150,52 L 150,92 L 120,80 Z" fill="#15181d" stroke="#2a2f38" strokeWidth="1.5" />
-        <text x="-135" y="72" textAnchor="middle" fill="#556170" fontSize="8" fontFamily="Rajdhani,sans-serif" fontWeight="700">▼</text>
-        <text x="135" y="72" textAnchor="middle" fill="#556170" fontSize="8" fontFamily="Rajdhani,sans-serif" fontWeight="700">▲</text>
+        <text x="-135" y="72" textAnchor="middle" fill="#b8c4d0" fontSize="8" fontFamily="Rajdhani,sans-serif" fontWeight="700">▼</text>
+        <text x="135" y="72" textAnchor="middle" fill="#b8c4d0" fontSize="8" fontFamily="Rajdhani,sans-serif" fontWeight="700">▲</text>
 
         {/* ── CENTRAL CARBON BODY (rectangular F1 shape) ── */}
         <path
@@ -145,9 +157,9 @@ function SteeringWheel({ angle, rpm, gear, speed, drs, pitLimiter }: { angle: nu
         <rect x="-50" y="-66" width="100" height="52" rx="5" fill="none" stroke="#000" strokeWidth="0.5" />
         <text x="-44" y="-52" fill="#2fd27a" fontSize="7" fontFamily="'JetBrains Mono',monospace" fontWeight="700" letterSpacing="1">SMART RACE</text>
         <text x="-8" y="-24" textAnchor="middle" fill="#3affa0" fontSize="30" fontFamily="'JetBrains Mono',monospace" fontWeight="700">{gear}</text>
-        <text x="-8" y="-14" textAnchor="middle" fill="#0d6b3f" fontSize="6" fontFamily="Rajdhani,sans-serif" letterSpacing="2">GEAR</text>
+        <text x="-8" y="-14" textAnchor="middle" fill="#3affa0" fontSize="6" fontFamily="Rajdhani,sans-serif" letterSpacing="2">GEAR</text>
         <text x="44" y="-46" textAnchor="end" fill="#e8eaed" fontSize="15" fontFamily="'JetBrains Mono',monospace" fontWeight="700">{Math.round(speed)}</text>
-        <text x="44" y="-38" textAnchor="end" fill="#0d6b3f" fontSize="6" fontFamily="Rajdhani,sans-serif" letterSpacing="1">KM/H</text>
+        <text x="44" y="-38" textAnchor="end" fill="#3affa0" fontSize="6" fontFamily="Rajdhani,sans-serif" letterSpacing="1">KM/H</text>
         {/* mini rpm bar in display */}
         <rect x="26" y="-28" width="20" height="4" rx="1" fill="#04241a" />
         <rect x="26" y="-28" width={clamp(rpm / RPM_MAX, 0, 1) * 20} height="4" rx="1" fill="#3affa0" />
@@ -160,11 +172,11 @@ function SteeringWheel({ angle, rpm, gear, speed, drs, pitLimiter }: { angle: nu
         {/* DRS + PIT (state-reactive) */}
         <g>
           <rect x="-46" y="24" width="40" height="20" rx="4" fill={drs ? "#22c55e" : "#0f1115"} stroke={drs ? "#22c55e" : "#333"} strokeWidth="1.5" />
-          <text x="-26" y="38" textAnchor="middle" fill={drs ? "#04140a" : "#6b7684"} fontSize="9" fontFamily="Rajdhani,sans-serif" fontWeight="700" letterSpacing="1">DRS</text>
+          <text x="-26" y="38" textAnchor="middle" fill={drs ? "#04140a" : "#b8c4d0"} fontSize="9" fontFamily="Rajdhani,sans-serif" fontWeight="700" letterSpacing="1">DRS</text>
         </g>
         <g>
           <rect x="6" y="24" width="40" height="20" rx="4" fill={pitLimiter ? "#f59e0b" : "#0f1115"} stroke={pitLimiter ? "#f59e0b" : "#333"} strokeWidth="1.5" />
-          <text x="26" y="38" textAnchor="middle" fill={pitLimiter ? "#140d02" : "#6b7684"} fontSize="9" fontFamily="Rajdhani,sans-serif" fontWeight="700" letterSpacing="1">PIT</text>
+          <text x="26" y="38" textAnchor="middle" fill={pitLimiter ? "#140d02" : "#b8c4d0"} fontSize="9" fontFamily="Rajdhani,sans-serif" fontWeight="700" letterSpacing="1">PIT</text>
         </g>
 
         {/* ── ROTARY DIALS ── */}
@@ -211,18 +223,20 @@ function RPMLEDs({ rpm }: { rpm: number }) {
 
 function PedalBar({ value, color, label }: { value: number; color: string; label: string }) {
   return (
-    <div className="flex flex-col items-center gap-1" style={{ width: 36 }}>
+    <div className="flex flex-col gap-1" style={{ width: 76 }}>
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-xs font-bold" style={{ color, fontSize: 11 }}>{label}</span>
+        <span className="font-mono text-xs" style={{ color: "#a8b3c2", fontSize: 10 }}>{Math.round(value * 100)}%</span>
+      </div>
       <div
-        className="w-full rounded-t relative overflow-hidden"
-        style={{ height: 100, background: "#111" }}
+        className="w-full rounded relative overflow-hidden"
+        style={{ height: 14, background: "#111", border: "1px solid #222" }}
       >
         <div
-          className="absolute bottom-0 left-0 right-0 rounded-t transition-all duration-60"
-          style={{ height: `${value * 100}%`, background: color, boxShadow: value > 0 ? `0 0 12px ${color}` : "none" }}
+          className="absolute top-0 bottom-0 left-0 rounded transition-all duration-60"
+          style={{ width: `${value * 100}%`, background: color, boxShadow: value > 0 ? `0 0 12px ${color}` : "none" }}
         />
       </div>
-      <span className="font-mono text-xs font-bold" style={{ color, fontSize: 10 }}>{label}</span>
-      <span className="font-mono text-xs" style={{ color: "#666", fontSize: 10 }}>{Math.round(value * 100)}%</span>
     </div>
   );
 }
@@ -232,22 +246,24 @@ function PedalBar({ value, color, label }: { value: number; color: string; label
 function TrackMap({ progress }: { progress: number }) {
   // Simplified Interlagos-ish shape
   const path = "M 80,20 Q 150,10 170,50 Q 190,90 160,110 Q 130,130 150,160 Q 170,190 140,210 Q 100,230 60,200 Q 20,170 30,130 Q 40,90 20,60 Q 10,30 80,20 Z";
-  const perimeterApprox = 620;
-  const offset = perimeterApprox * (1 - progress);
+  const normalizedProgress = clamp(progress, 0, 1);
+  const pathRef = useRef<SVGPathElement>(null);
+  const markerRef = useRef<SVGCircleElement>(null);
+
+  useEffect(() => {
+    const path = pathRef.current;
+    const marker = markerRef.current;
+    if (!path || !marker) return;
+    const point = path.getPointAtLength(normalizedProgress * path.getTotalLength());
+    marker.setAttribute("cx", point.x.toFixed(2));
+    marker.setAttribute("cy", point.y.toFixed(2));
+  }, [normalizedProgress]);
 
   return (
-    <svg width="200" height="240" viewBox="0 0 200 240">
+    <svg width="155" height="150" viewBox="0 0 200 240">
       <path d={path} fill="none" stroke="#1e2a38" strokeWidth="12" strokeLinejoin="round" />
-      <path d={path} fill="none" stroke="#2a3a4a" strokeWidth="8" strokeLinejoin="round" />
-      <path
-        d={path}
-        fill="none"
-        stroke="#e8230a"
-        strokeWidth="3"
-        strokeLinejoin="round"
-        strokeDasharray={perimeterApprox}
-        strokeDashoffset={offset}
-      />
+      <path ref={pathRef} d={path} fill="none" stroke="#2a3a4a" strokeWidth="8" strokeLinejoin="round" pathLength="1" />
+      <path d={path} fill="none" stroke="#e8230a" strokeWidth="2.5" strokeLinejoin="round" opacity="0.8" />
       {/* sector markers */}
       <circle cx="170" cy="80" r="4" fill="#f59e0b" />
       <circle cx="80" cy="210" r="4" fill="#f59e0b" />
@@ -256,8 +272,9 @@ function TrackMap({ progress }: { progress: number }) {
       {/* start/finish */}
       <rect x="73" y="14" width="14" height="10" rx="1" fill="#22c55e" />
       <text x="95" y="22" fill="#22c55e" fontSize="8" fontFamily="Rajdhani,sans-serif">S/F</text>
+      <circle ref={markerRef} cx="80" cy="20" r="5" fill="#fff" stroke="#e8230a" strokeWidth="2" />
       {/* circuit name */}
-      <text x="100" y="125" textAnchor="middle" fill="#2a3a4a" fontSize="9" fontFamily="Rajdhani,sans-serif" fontWeight="700">INTERLAGOS</text>
+      <text x="100" y="125" textAnchor="middle" fill="#a8b3c2" fontSize="9" fontFamily="Rajdhani,sans-serif" fontWeight="700">INTERLAGOS</text>
     </svg>
   );
 }
@@ -269,10 +286,10 @@ function Key({ label, active, wide = false }: { label: string; active: boolean; 
     <div
       className="flex items-center justify-center rounded font-mono font-bold select-none transition-all duration-60"
       style={{
-        width: wide ? 56 : 28, height: 28,
-        fontSize: 10,
+        width: wide ? 72 : 38, height: 36,
+        fontSize: 11,
         background: active ? "#e8230a" : "#111",
-        color: active ? "#fff" : "#555",
+        color: active ? "#fff" : "#b8c4d0",
         border: `1px solid ${active ? "#e8230a" : "#222"}`,
         boxShadow: active ? "0 0 8px rgba(232,35,10,0.6), 0 3px 0 #a00" : "0 3px 0 #000",
         transform: active ? "translateY(2px)" : "none",
@@ -310,7 +327,7 @@ function StateOverlay({ state, step, onAction }: { state: CockpitState; step: nu
         >
           {cfg.title}
         </div>
-        <div className="font-body text-sm" style={{ color: "#64748b" }}>{cfg.sub}</div>
+      <div className="font-body text-sm" style={{ color: "#a8b3c2" }}>{cfg.sub}</div>
       </div>
 
       {state === "VALIDATING" && (
@@ -322,7 +339,7 @@ function StateOverlay({ state, step, onAction }: { state: CockpitState; step: nu
           ].map((s, i) => {
             const done = step >= i + 1;
             return (
-              <div key={i} className="flex items-center gap-2 font-mono text-xs" style={{ color: done ? "#22c55e" : "#64748b" }}>
+              <div key={i} className="flex items-center gap-2 font-mono text-xs" style={{ color: done ? "#22c55e" : "#a8b3c2" }}>
                 <div className={`w-2 h-2 rounded-full ${done ? "" : "pulse"}`} style={{ background: done ? "#22c55e" : "#f59e0b" }} />
                 {done ? "✓ " : ""}{s.label}
               </div>
@@ -345,7 +362,7 @@ function StateOverlay({ state, step, onAction }: { state: CockpitState; step: nu
         </button>
       )}
 
-      <div className="font-mono text-xs" style={{ color: "#2a3a4a" }}>
+      <div className="font-mono text-xs" style={{ color: "#a8b3c2" }}>
         SENAI · Mecatrônica · Prof. Aurimar · Douglas · Deni · Gabriela · Gabriel · Lucas · Marcio · Nicolas · Vitor
       </div>
     </div>
@@ -386,7 +403,7 @@ function sensorStatus(
   step: number,
 ): { value: string; color: string; on: boolean } {
   const active = state === "ACTIVE" || state === "PAUSED";
-  const GREEN = "#22c55e", AMBER = "#f59e0b", GRAY = "#3a4657", RED = "#ef4444";
+  const GREEN = "#22c55e", AMBER = "#f59e0b", GRAY = "#94a3b8", RED = "#ef4444";
 
   switch (key) {
     // occupancy trio — validated sequentially during VALIDATING
@@ -422,7 +439,7 @@ function CockpitDiagram({ car, state, step }: { car: CarState; state: CockpitSta
   const steer = car.steerAngle * 20; // wheel rotation hint
 
   return (
-    <svg width="300" height="335" viewBox="0 0 340 380" style={{ maxWidth: "100%" }}>
+    <svg width="380" height="420" viewBox="0 0 340 380" style={{ maxWidth: "100%" }}>
       <defs>
         <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#161b22" />
@@ -485,7 +502,7 @@ function CockpitDiagram({ car, state, step }: { car: CarState; state: CockpitSta
       {/* ── SENSOR MARKERS + CALLOUTS ── */}
       {SENSORS.map((s) => {
         const st = sensorStatus(s.key, car, state, step);
-        const chipW = 108, chipH = 30;
+         const chipW = 118, chipH = 34;
         const chipX = s.side === "L" ? s.lx : s.lx - chipW + 82;
         const anchorX = s.side === "L" ? chipX + chipW : chipX;
         return (
@@ -493,32 +510,55 @@ function CockpitDiagram({ car, state, step }: { car: CarState; state: CockpitSta
             {/* connector */}
             <line x1={s.dx} y1={s.dy} x2={anchorX} y2={s.ly + chipH / 2} stroke={st.on ? st.color : "#2a3240"} strokeWidth="1" opacity={st.on ? 0.55 : 0.3} />
             {/* marker on chassis */}
-            <circle cx={s.dx} cy={s.dy} r="9" fill="none" stroke={st.color} strokeWidth="1.5" opacity={st.on ? 0.5 : 0.25} className={st.on ? "pulse" : undefined} />
-            <circle cx={s.dx} cy={s.dy} r="4" fill={st.color} opacity={st.on ? 1 : 0.4} />
+            <circle cx={s.dx} cy={s.dy} r="11" fill="none" stroke={st.color} strokeWidth="2" opacity={st.on ? 0.65 : 0.35} className={st.on ? "pulse" : undefined} />
+            <circle cx={s.dx} cy={s.dy} r="5" fill={st.color} opacity={st.on ? 1 : 0.5} />
             {/* label chip */}
             <rect x={chipX} y={s.ly} width={chipW} height={chipH} rx="4" fill="#0b0e13" stroke={st.on ? st.color : "#222b36"} strokeWidth="1" opacity="0.96" />
             <rect x={chipX} y={s.ly} width="3" height={chipH} rx="1.5" fill={st.color} opacity={st.on ? 1 : 0.4} />
-            <text x={chipX + 9} y={s.ly + 12} fill="#cdd6e0" fontSize="8.5" fontFamily="Rajdhani,sans-serif" fontWeight="700" letterSpacing="0.5">{s.name}</text>
-            <text x={chipX + 9} y={s.ly + 21} fill="#556170" fontSize="6.5" fontFamily="Inter,sans-serif">{s.spec}</text>
-            <text x={chipX + chipW - 8} y={s.ly + 20} textAnchor="end" fill={st.color} fontSize="9" fontFamily="JetBrains Mono,monospace" fontWeight="700">{st.value}</text>
+            <text x={chipX + 9} y={s.ly + 13} fill="#f1f5f9" fontSize="10" fontFamily="Rajdhani,sans-serif" fontWeight="700" letterSpacing="0.5">{s.name}</text>
+            <text x={chipX + 9} y={s.ly + 24} fill="#b8c4d0" fontSize="7.5" fontFamily="Inter,sans-serif">{s.spec}</text>
+            <text x={chipX + chipW - 8} y={s.ly + 22} textAnchor="end" fill={st.color} fontSize="10" fontFamily="JetBrains Mono,monospace" fontWeight="700">{st.value}</text>
           </g>
         );
       })}
 
       {/* labels */}
-      <text x="170" y="18" textAnchor="middle" fill="#374151" fontSize="8" fontFamily="Rajdhani,sans-serif" letterSpacing="2">DIANTEIRA</text>
-      <text x="170" y="368" textAnchor="middle" fill="#374151" fontSize="8" fontFamily="Rajdhani,sans-serif" letterSpacing="2">TRASEIRA</text>
+      <text x="170" y="18" textAnchor="middle" fill="#a8b3c2" fontSize="8" fontFamily="Rajdhani,sans-serif" letterSpacing="2">DIANTEIRA</text>
+      <text x="170" y="368" textAnchor="middle" fill="#a8b3c2" fontSize="8" fontFamily="Rajdhani,sans-serif" letterSpacing="2">TRASEIRA</text>
     </svg>
   );
 }
 
 // ── Track View (pseudo-3D road ahead) ─────────────────────────────────────────
 
-function TrackView({ speed, steer, distance, gear, drs }: { speed: number; steer: number; distance: number; gear: number; drs: boolean }) {
-  const shift = steer * 90;          // lateral curve offset
-  const bank = steer * 6;            // slight bank into corners
-  const seg = 130;                   // pattern segment size (px)
-  const scroll = distance % (seg * 4);
+function TrackView({ speed, steer, distance, gear, drs, lateralOffset }: { speed: number; steer: number; distance: number; gear: number; drs: boolean; lateralOffset: number }) {
+  const curve = trackCurve(distance);
+  const carTrackCenter = trackCurve(distance + 20) * 18;
+  const roadPoints = Array.from({ length: 13 }, (_, i) => {
+    const t = i / 12;
+    const y = 8 + t * 92;
+    const lookAhead = (1 - t) * 900 + 20;
+    const center = 50 + trackCurve(distance + lookAhead) * (2 + t * 18);
+    const halfWidth = 2 + t * 46;
+    return { y, center, halfWidth };
+  });
+  const leftPoints = roadPoints.map((p) => `${p.center - p.halfWidth},${p.y}`);
+  const rightPoints = roadPoints.map((p) => `${p.center + p.halfWidth},${p.y}`);
+  const leftEdge = leftPoints.join(" ");
+  const rightEdge = rightPoints.join(" ");
+  const centerLine = roadPoints.map((p) => `${p.center},${p.y}`).join(" ");
+  const roadPath = `M ${leftPoints.join(" L ")} L ${[...rightPoints].reverse().join(" L ")} Z`;
+  // Multiplicador apenas visual: o asfalto precisa transmitir velocidade,
+  // mas a distância física do mapa continua sem aceleração artificial.
+  const roadScroll = -((distance / 4) % 8);
+  const motionOffset = (distance / 0.8) % 18;
+  const roadRungs = Array.from({ length: 6 }, (_, i) => {
+    const y = 34 + ((i * 15 + motionOffset) % 62);
+    const t = clamp((y - 8) / 92, 0, 1);
+    const center = 50 + trackCurve(distance + (1 - t) * 900 + 20) * (2 + t * 18);
+    const halfWidth = 2 + t * 46;
+    return { y, x1: center - halfWidth, x2: center + halfWidth };
+  });
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden",
@@ -530,30 +570,54 @@ function TrackView({ speed, steer, distance, gear, drs }: { speed: number; steer
       {/* distant grandstand lights */}
       <div style={{ position: "absolute", left: 0, right: 0, top: "50%", height: "13%",
         backgroundImage: "repeating-linear-gradient(90deg,transparent 0 14px,rgba(255,220,150,0.10) 14px 16px)" }} />
+      <div style={{ position: "absolute", left: 0, top: "48%", width: "27%", height: "17%", opacity: 0.75,
+        background: "repeating-linear-gradient(165deg,#283241 0 8px,#111827 8px 14px)", clipPath: "polygon(0 35%,100% 0,100% 100%,0 100%)" }} />
+      <div style={{ position: "absolute", right: 0, top: "48%", width: "27%", height: "17%", opacity: 0.75,
+        background: "repeating-linear-gradient(15deg,#283241 0 8px,#111827 8px 14px)", clipPath: "polygon(0 0,100% 35%,100% 100%,0 100%)" }} />
+      <div style={{ position: "absolute", left: 0, top: "64%", width: "100%", height: 5,
+        background: "repeating-linear-gradient(90deg,#9ca3af 0 22px,#475569 22px 28px)", boxShadow: "0 2px 5px #000" }} />
+      <div style={{ position: "absolute", left: 0, top: "66%", width: "100%", height: 3,
+        background: "repeating-linear-gradient(90deg,#e8230a 0 18px,#f8fafc 18px 36px)" }} />
 
       {/* road plane */}
       <div style={{
         position: "absolute", left: "50%", top: "63%", width: "460%", height: "150%",
-        transform: `translateX(-50%) translateX(${-shift}px) rotate(${bank}deg) perspective(260px) rotateX(74deg)`,
+         transform: "translateX(-50%) perspective(260px) rotateX(74deg)",
         transformOrigin: "50% 0%",
         backgroundColor: "#0b0f16",
-        backgroundImage: [
-          "repeating-linear-gradient(0deg,#e6e6e6 0 30px,transparent 30px 130px)",      // center dashes
-          "linear-gradient(90deg,transparent 27%,#c9ccd2 27% 27.7%,transparent 27.7%)", // left edge
-          "linear-gradient(90deg,transparent 72.3%,#c9ccd2 72.3% 73%,transparent 73%)", // right edge
-          "repeating-linear-gradient(0deg,rgba(255,255,255,0.05) 0 3px,transparent 3px 65px)", // speed rungs
-          "linear-gradient(90deg,#0e1420 0 27%,#0b0f16 27% 73%,#0e1420 73% 100%)",       // asphalt/verge
-        ].join(","),
-        backgroundSize: `12px ${seg}px, 100% 100%, 100% 100%, 100% 65px, 100% 100%`,
-        backgroundPosition: `50% ${scroll}px, 0 0, 0 0, 0 ${scroll}px, 0 0`,
-        backgroundRepeat: "repeat-y, no-repeat, no-repeat, repeat, no-repeat",
-        boxShadow: "inset 0 60px 80px rgba(0,0,0,0.6)",
-      }} />
+        backgroundImage: "linear-gradient(90deg,#0e1420 0 27%,#0b0f16 27% 73%,#0e1420 73% 100%)",
+        backgroundSize: "100% 100%",
+        backgroundPosition: "0 0",
+        backgroundRepeat: "no-repeat",
+         boxShadow: "inset 0 60px 80px rgba(0,0,0,0.6)",
+       }} />
+
+      {/* Traçado visível: bordas e linha central acompanham as curvas */}
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
+        <path d={roadPath} fill="#303a45" stroke="#0b0f14" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+        <polyline points={leftEdge} fill="none" stroke="#f8fafc" strokeWidth="3" vectorEffect="non-scaling-stroke" />
+        <polyline points={rightEdge} fill="none" stroke="#f8fafc" strokeWidth="3" vectorEffect="non-scaling-stroke" />
+        <polyline points={leftEdge} fill="none" stroke="#e8230a" strokeWidth="1.5" strokeDasharray="5 4" vectorEffect="non-scaling-stroke" />
+        <polyline points={rightEdge} fill="none" stroke="#e8230a" strokeWidth="1.5" strokeDasharray="5 4" vectorEffect="non-scaling-stroke" />
+        {roadRungs.map((rung, i) => (
+          <line key={i} x1={rung.x1} y1={rung.y} x2={rung.x2} y2={rung.y} stroke="#b8c4d0" strokeWidth="0.7" opacity="0.5" vectorEffect="non-scaling-stroke" />
+        ))}
+        <polyline points={centerLine} fill="none" stroke="#f8fafc" strokeWidth="0.7" strokeDasharray="3 5" strokeDashoffset={roadScroll} vectorEffect="non-scaling-stroke" opacity="0.82" />
+      </svg>
 
       {/* speed streaks near camera when fast */}
       {speed > 120 && (
         <div style={{ position: "absolute", inset: 0, pointerEvents: "none", opacity: clamp((speed - 120) / 180, 0, 0.5),
           background: "radial-gradient(ellipse at 50% 120%,transparent 40%,rgba(232,35,10,0.18) 100%)" }} />
+      )}
+
+      <div style={{ position: "absolute", left: `calc(50% + ${carTrackCenter + lateralOffset * 24}%)`, bottom: 7, transform: "translateX(-50%)", color: Math.abs(lateralOffset) > 0.75 ? "#ef4444" : "#f8fafc", fontSize: 18, fontWeight: 700, lineHeight: 1, textShadow: "0 1px 5px #000" }}>
+        ▲
+      </div>
+      {Math.abs(lateralOffset) > 0.75 && (
+        <div style={{ position: "absolute", left: "50%", bottom: 34, transform: "translateX(-50%)", color: "#ef4444", fontSize: 10, fontWeight: 700, letterSpacing: 1.5 }}>
+          SAINDO DO TRAÇADO
+        </div>
       )}
 
       {/* HUD overlay: speed + gear on the windshield */}
@@ -563,8 +627,13 @@ function TrackView({ speed, steer, distance, gear, drs }: { speed: number; steer
       </div>
       <div style={{ position: "absolute", right: 16, bottom: 6, textAlign: "center" }}>
         <div style={{ fontSize: 44, fontWeight: 700, lineHeight: 1, color: "#e8230a", textShadow: "0 0 24px rgba(232,35,10,0.6)" }}>{gear}</div>
-        <div style={{ fontSize: 9, color: "#374151", letterSpacing: 2 }}>MARCHA</div>
+        <div style={{ fontSize: 9, color: "#a8b3c2", letterSpacing: 2 }}>MARCHA</div>
       </div>
+      {Math.abs(curve) > 0.42 && (
+        <div style={{ position: "absolute", top: 10, left: "50%", transform: "translateX(-50%)", color: "#fbbf24", fontSize: 11, letterSpacing: 1.5 }}>
+          CURVA {curve < 0 ? "←" : "→"} · ESTERCE
+        </div>
+      )}
       {drs && (
         <div style={{ position: "absolute", top: 10, right: 14, fontSize: 12, fontWeight: 700, color: "#22c55e",
           background: "rgba(34,197,94,0.12)", border: "1px solid #22c55e", borderRadius: 4, padding: "2px 8px", letterSpacing: 2 }}>
@@ -578,7 +647,7 @@ function TrackView({ speed, steer, distance, gear, drs }: { speed: number; steer
 // ── Main App ──────────────────────────────────────────────────────────────────
 
 const INIT_CAR: CarState = {
-  speed: 0, rpm: RPM_IDLE, gear: 1, steerAngle: 0,
+  speed: 0, rpm: RPM_IDLE, gear: 1, steerAngle: 0, lateralOffset: 0,
   throttle: 0, brake: 0, lapTime: 0, bestLap: 0, lapCount: 0,
   sector: 1, sectorTime: 0, gForce: 0, tyreTemp: 28,
   fuel: 100, sessionTime: 0, distance: 0, wheelSpin: false, drs: false, pitLimiter: false,
@@ -590,6 +659,8 @@ export default function App() {
   const [car, setCar] = useState<CarState>(INIT_CAR);
   const keysRef = useRef<Keys>({ up: false, down: false, left: false, right: false, shift: false, ctrl: false, space: false, d: false });
   const carRef = useRef<CarState>(INIT_CAR);
+  // Guarda somente a última troca solicitada. Assim, um acionamento do paddle
+  // nunca acumula várias marchas para serem aplicadas no mesmo frame.
   const pendingShiftRef = useRef<number>(0);
   const rafRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
@@ -602,8 +673,7 @@ export default function App() {
     const map: Record<string, keyof Keys> = {
       ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
       KeyW: "up", KeyS: "down", KeyA: "left", KeyD: "right",
-      ShiftLeft: "shift", ShiftRight: "shift",
-      ControlLeft: "ctrl", ControlRight: "ctrl",
+      KeyE: "shift", KeyQ: "ctrl",
       Space: "space",
     };
     const onKey = (e: KeyboardEvent, v: boolean) => {
@@ -613,19 +683,30 @@ export default function App() {
       }
       // Paddle shifters — edge-triggered (one shift per key press)
       if (v && !e.repeat) {
-        if (e.code === "ShiftLeft" || e.code === "ShiftRight") pendingShiftRef.current += 1;   // upshift
-        if (e.code === "ControlLeft" || e.code === "ControlRight") pendingShiftRef.current -= 1; // downshift
+        if (e.code === "KeyE") pendingShiftRef.current = 1;   // upshift
+        if (e.code === "KeyQ") pendingShiftRef.current = -1;  // downshift
       }
       // DRS toggle
       if (e.code === "KeyZ" && v) setCar((c) => ({ ...c, drs: !c.drs }));
       // Pit limiter
       if (e.code === "KeyX" && v) setCar((c) => ({ ...c, pitLimiter: !c.pitLimiter }));
     };
-    window.addEventListener("keydown", (e) => onKey(e, true));
-    window.addEventListener("keyup", (e) => onKey(e, false));
+    const onKeyDown = (e: KeyboardEvent) => onKey(e, true);
+    const onKeyUp = (e: KeyboardEvent) => onKey(e, false);
+    const clearKeys = () => {
+      keysRef.current = { up: false, down: false, left: false, right: false, shift: false, ctrl: false, space: false, d: false };
+      pendingShiftRef.current = 0;
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", clearKeys);
+    document.addEventListener("visibilitychange", clearKeys);
     return () => {
-      window.removeEventListener("keydown", (e) => onKey(e, true));
-      window.removeEventListener("keyup", (e) => onKey(e, false));
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", clearKeys);
+      document.removeEventListener("visibilitychange", clearKeys);
     };
   }, []);
 
@@ -642,11 +723,12 @@ export default function App() {
     const throttleInput = k.up ? 1 : 0;
     const brakeInput = k.down ? 1 : 0;
     const steerInput = k.left ? -1 : k.right ? 1 : 0;
+    const lateralOffset = 0;
 
     // Manual paddle shifting — apply any pending edge-triggered shifts
     let gear = prev.gear;
     if (pendingShiftRef.current !== 0) {
-      gear = Math.round(clamp(gear + pendingShiftRef.current, 1, 8));
+      gear = clamp(gear + pendingShiftRef.current, 1, 8);
       pendingShiftRef.current = 0;
     }
     // Stall protection: drop to 1st when nearly stopped
@@ -657,8 +739,13 @@ export default function App() {
     // toward the current gear's top speed, so upshifting through 1→8 keeps
     // increasing speed all the way to 340 km/h in 8th.
     const gearTop = GEAR_TOP_SPEED[gear];
-    const pitCap = prev.pitLimiter ? 80 : 340;
-    const ceiling = Math.min(gearTop, pitCap);                  // top speed available right now
+    const pitCap = prev.pitLimiter ? 80 : 360;
+    // Curvas reduzem a velocidade disponível; esterçar para o lado correto
+    // libera mais aderência e torna necessário acompanhar o traçado.
+    // A curva só limita a velocidade quando o piloto não acompanha o lado
+    // correto; esterçar corretamente mantém o ritmo e evita desaceleração
+    // automática sem uma causa visível.
+    const ceiling = Math.min(gearTop, pitCap);
 
     const throttle = throttleInput;
     // target speed we're heading toward, and how fast we get there
@@ -677,7 +764,7 @@ export default function App() {
     const speed = clamp(
       prev.speed + (targetSpeed - prev.speed) * clamp(rate * dt, 0, 1),
       0,
-      ceiling,
+      360,
     );
     const longAccel = (speed - prev.speed) / Math.max(dt, 0.001); // km/h per s
 
@@ -703,23 +790,23 @@ export default function App() {
     // Fuel
     const fuel = clamp(prev.fuel - throttle * dt * 0.005, 0, 100);
 
+    // Distância física: velocidade em km/h convertida para metros por segundo.
+    const distance = safe(prev.distance) + (speed / 3.6) * dt;
+
     // Lap / sector timing
     const sessionTime = prev.sessionTime + dt;
     const lapTime = prev.lapTime + dt;
     const sectorTime = prev.sectorTime + dt;
     const newSector = sectorTime > 28 ? (prev.sector % 3) + 1 : prev.sector;
-    const newLap = lapTime > 84;
+    const newLap = Math.floor(distance / TRACK_LENGTH) > Math.floor(prev.distance / TRACK_LENGTH);
     const lapCount = newLap ? prev.lapCount + 1 : prev.lapCount;
     const bestLap = newLap && (prev.bestLap === 0 || lapTime < prev.bestLap) ? lapTime : prev.bestLap;
 
     // Wheel spin at low gear high throttle
     const wheelSpin = gear <= 2 && throttle > 0.8 && speed < 60;
 
-    // Distance travelled (drives the track view scroll)
-    const distance = safe(prev.distance) + speed * dt * 2.4;
-
     const next: CarState = {
-      speed, rpm, gear, steerAngle,
+      speed, rpm, gear, steerAngle, lateralOffset,
       throttle: throttleInput, brake: brakeInput,
       lapTime: newLap ? 0 : lapTime,
       sectorTime: newSector !== prev.sector || newLap ? 0 : sectorTime,
@@ -769,7 +856,16 @@ export default function App() {
   }, []);
 
   const isActive = cockpitState === "ACTIVE";
-  const lapProgress = car.lapTime / 84;
+  // O mapa usa a mesma distância da pista; parado, o marcador permanece parado.
+  const lapProgress = ((car.distance % TRACK_LENGTH) + TRACK_LENGTH) % TRACK_LENGTH / TRACK_LENGTH;
+  const currentCurve = trackCurve(car.distance);
+  const speedReason = car.pitLimiter
+    ? "LIMITADOR PIT · 80 KM/H"
+    : car.throttle === 0 && car.speed > 1
+      ? "SEM ACELERAÇÃO"
+      : Math.abs(currentCurve) > 0.28
+        ? `CURVA ${currentCurve < 0 ? "À ESQUERDA" : "À DIREITA"}`
+        : "ACELERANDO";
 
   // Tyre color
   const tyreColor = car.tyreTemp > 100 ? "#ef4444" : car.tyreTemp > 80 ? "#22c55e" : car.tyreTemp > 60 ? "#f59e0b" : "#94a3b8";
@@ -796,15 +892,15 @@ export default function App() {
           {/* LAP TIMES */}
           <div className="flex gap-6">
             <div>
-              <div style={{ color: "#64748b", fontSize: 10, letterSpacing: 2 }}>VOLTA</div>
+              <div style={{ color: "#a8b3c2", fontSize: 10, letterSpacing: 2 }}>VOLTA</div>
               <div style={{ color: "#e8eaed", fontSize: 22, fontWeight: 700, fontFamily: "'JetBrains Mono',monospace" }}>{formatLap(car.lapTime)}</div>
             </div>
             <div>
-              <div style={{ color: "#64748b", fontSize: 10, letterSpacing: 2 }}>MELHOR</div>
+              <div style={{ color: "#a8b3c2", fontSize: 10, letterSpacing: 2 }}>MELHOR</div>
               <div style={{ color: "#e8230a", fontSize: 22, fontWeight: 700, fontFamily: "'JetBrains Mono',monospace" }}>{formatLap(car.bestLap)}</div>
             </div>
             <div>
-              <div style={{ color: "#64748b", fontSize: 10, letterSpacing: 2 }}>VOLTAS</div>
+              <div style={{ color: "#a8b3c2", fontSize: 10, letterSpacing: 2 }}>VOLTAS</div>
               <div style={{ color: "#e8eaed", fontSize: 22, fontWeight: 700 }}>{car.lapCount}</div>
             </div>
           </div>
@@ -812,17 +908,20 @@ export default function App() {
           {/* CENTER TITLE */}
           <div className="text-center">
             <div style={{ color: "#e8230a", fontSize: 14, fontWeight: 700, letterSpacing: 4 }}>SMART RACE COCKPIT</div>
-            <div style={{ color: "#374151", fontSize: 10 }}>SENAI · MECATRÔNICA · 2026</div>
+            <div style={{ display: "inline-block", marginTop: 4, padding: "2px 10px", borderRadius: 3, fontSize: 9, letterSpacing: 2, color: isActive ? "#22c55e" : "#f59e0b", border: `1px solid ${isActive ? "#166534" : "#854d0e"}`, background: isActive ? "#052e16" : "#451a03" }}>
+              {isActive ? "MODO MANUAL · EM OPERAÇÃO" : cockpitState}
+            </div>
+            <div style={{ color: "#a8b3c2", fontSize: 10 }}>SENAI · MECATRÔNICA · 2026</div>
           </div>
 
           {/* RIGHT: SESSION + SECTOR */}
           <div className="flex gap-6 items-start">
             <div>
-              <div style={{ color: "#64748b", fontSize: 10, letterSpacing: 2 }}>SESSÃO</div>
+              <div style={{ color: "#a8b3c2", fontSize: 10, letterSpacing: 2 }}>SESSÃO</div>
               <div style={{ color: "#e8eaed", fontSize: 22, fontWeight: 700, fontFamily: "'JetBrains Mono',monospace" }}>{formatLap(car.sessionTime)}</div>
             </div>
             <div>
-              <div style={{ color: "#64748b", fontSize: 10, letterSpacing: 2 }}>SETOR</div>
+              <div style={{ color: "#a8b3c2", fontSize: 10, letterSpacing: 2 }}>SETOR</div>
               <div className="flex gap-1 mt-1">
                 {[1,2,3].map((s) => (
                   <div key={s} style={{
@@ -836,8 +935,8 @@ export default function App() {
         </div>
 
         {/* WINDSHIELD / TRACK VIEW */}
-        <div className="flex-shrink-0 relative overflow-hidden" style={{ height: "22vh", minHeight: 140, borderBottom: "2px solid #1e2a38" }}>
-          <TrackView speed={car.speed} steer={car.steerAngle} distance={car.distance} gear={car.gear} drs={car.drs} />
+        <div className="flex-shrink-0 relative overflow-hidden" style={{ height: "17vh", minHeight: 105, borderBottom: "2px solid #1e2a38" }}>
+          <TrackView speed={car.speed} steer={car.steerAngle} distance={car.distance} gear={car.gear} drs={car.drs} lateralOffset={car.lateralOffset} />
           {/* RPM shift lights overlaid on top of the windshield */}
           <div className="absolute left-0 right-0 flex justify-center" style={{ top: 8 }}>
             <RPMLEDs rpm={car.rpm} />
@@ -848,20 +947,17 @@ export default function App() {
         <div className="flex flex-1 overflow-hidden" style={{ minHeight: 0 }}>
 
           {/* LEFT COLUMN: Pedals + Sensors */}
-          <div className="flex flex-col justify-between p-4 gap-4 flex-shrink-0" style={{ width: 160 }}>
+          <div className="flex flex-col justify-between p-2 gap-3 flex-shrink-0 carbon" style={{ width: 190, borderRight: "1px solid #1e2a38" }}>
 
-            {/* PEDALS */}
+            {/* MINI MAP */}
             <div>
-              <div style={{ color: "#374151", fontSize: 10, letterSpacing: 2, marginBottom: 8 }}>PEDAIS</div>
-              <div className="flex gap-3 justify-center">
-                <PedalBar value={car.throttle} color="#22c55e" label="ACS" />
-                <PedalBar value={car.brake} color="#e8230a" label="FRE" />
-              </div>
+              <div style={{ color: "#cbd5e1", fontSize: 11, letterSpacing: 2, marginBottom: 2 }}>PISTA</div>
+              <TrackMap progress={lapProgress} />
             </div>
 
             {/* SENSOR STATUS */}
-            <div className="flex flex-col gap-2">
-              <div style={{ color: "#374151", fontSize: 10, letterSpacing: 2 }}>SENSORES</div>
+            <div className="flex flex-col gap-1.5">
+              <div style={{ color: "#cbd5e1", fontSize: 12, letterSpacing: 2, marginBottom: 5 }}>SENSORES</div>
               {[
                 { label: "Pressão", val: `${Math.round(car.throttle * 80 + 20)}%`, ok: true },
                 { label: "Temp.Cab", val: `${(24 + car.speed * 0.05).toFixed(1)}°C`, ok: true },
@@ -871,35 +967,38 @@ export default function App() {
                 { label: "Câmbio",  val: `${car.gear}ª`, ok: true },
                 { label: "Pres.",   val: isActive ? "PILOT" : "—", ok: isActive },
               ].map((s) => (
-                <div key={s.label} className="flex items-center justify-between" style={{ fontSize: 10 }}>
-                  <span style={{ color: "#374151" }}>{s.label}</span>
+                <div key={s.label} className="flex items-center justify-between" style={{ fontSize: 11.5, lineHeight: 1.45 }}>
+                  <span style={{ color: "#cbd5e1" }}>{s.label}</span>
                   <span style={{
                     color: s.ok ? "#22c55e" : "#f59e0b",
                     fontFamily: "'JetBrains Mono',monospace",
-                    fontSize: 9,
+                    fontSize: 11.5,
                   }}>{s.val}</span>
                 </div>
               ))}
             </div>
 
-            {/* MINI MAP */}
+            {/* PEDALS: horizontal at the bottom */}
             <div>
-              <div style={{ color: "#374151", fontSize: 10, letterSpacing: 2, marginBottom: 4 }}>PISTA</div>
-              <TrackMap progress={lapProgress} />
+              <div style={{ color: "#cbd5e1", fontSize: 12, letterSpacing: 2, marginBottom: 5 }}>PEDAIS</div>
+              <div className="flex flex-row gap-2 justify-center items-end">
+                <PedalBar value={car.throttle} color="#22c55e" label="ACS" />
+                <PedalBar value={car.brake} color="#e8230a" label="FRE" />
+              </div>
             </div>
           </div>
 
           {/* CENTER: COCKPIT DIAGRAM + WHEEL */}
-          <div className="flex-1 flex items-start justify-center relative gap-4 overflow-hidden pt-3" style={{ minHeight: 0 }}>
+          <div className="flex-1 flex items-center justify-center relative gap-14 overflow-hidden px-6" style={{ minHeight: 0, background: "radial-gradient(ellipse at 50% 42%, rgba(30,42,56,0.22), transparent 62%)" }}>
 
             {/* REALISTIC COCKPIT + SENSOR MAP */}
-            <div className="flex flex-col items-center flex-shrink-0">
-              <div style={{ color: "#374151", fontSize: 10, letterSpacing: 2, marginBottom: 2 }}>MAPA DE SENSORES</div>
+            <div className="flex flex-col items-center flex-shrink-0 rounded" style={{ minWidth: 390, padding: "12px 16px", border: "1px solid #263444", background: "rgba(8,12,17,0.55)" }}>
+              <div style={{ color: "#a8b3c2", fontSize: 10, letterSpacing: 2, marginBottom: 2 }}>MAPA DE SENSORES</div>
               <CockpitDiagram car={car} state={cockpitState} step={validationStep} />
             </div>
 
             {/* WHEEL + CONTROLS */}
-            <div className="flex flex-col items-center justify-center gap-2">
+            <div className="flex flex-col items-center justify-center gap-3 rounded" style={{ minWidth: 390, padding: "18px 20px", border: "1px solid #263444", background: "rgba(8,12,17,0.55)" }}>
 
             {/* STEERING WHEEL */}
             <SteeringWheel angle={car.steerAngle} rpm={car.rpm} gear={car.gear} speed={car.speed} drs={car.drs} pitLimiter={car.pitLimiter} />
@@ -916,6 +1015,7 @@ export default function App() {
 
             {/* KEYBOARD CONTROLS */}
             <div className="mt-2 flex flex-col items-center gap-1.5">
+              <div style={{ color: "#94a3b8", fontSize: 10, letterSpacing: 2, marginBottom: 2 }}>CONTROLE DO VEÍCULO</div>
               <div className="flex justify-center">
                 <Key label="W▲" active={keysRef.current.up} />
               </div>
@@ -928,7 +1028,7 @@ export default function App() {
                 <Key label="SHIFT ▲" active={keysRef.current.shift} wide />
                 <Key label="CTRL ▼" active={keysRef.current.ctrl} wide />
               </div>
-              <div style={{ color: "#2a3a4a", fontSize: 9, letterSpacing: 1, marginTop: 4 }}>
+              <div style={{ color: "#a8b3c2", fontSize: 9, letterSpacing: 1, marginTop: 4 }}>
                 Z=DRS · X=PIT LIMITER · SHIFT=SUBIR · CTRL=DESCER
               </div>
             </div>
@@ -936,22 +1036,25 @@ export default function App() {
           </div>
 
           {/* RIGHT COLUMN: Speed + Gear + G + Fuel */}
-          <div className="flex flex-col justify-between p-4 gap-4 flex-shrink-0" style={{ width: 180 }}>
+          <div className="flex flex-col justify-between p-5 gap-4 flex-shrink-0 carbon" style={{ width: 220, borderLeft: "1px solid #1e2a38" }}>
 
             {/* SPEED */}
             <div className="text-center">
-              <div style={{ color: "#374151", fontSize: 10, letterSpacing: 2 }}>VELOCIDADE</div>
-              <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 72, fontWeight: 700, color: "#e8eaed", lineHeight: 1 }}>
-                {Math.round(car.speed).toString().padStart(3, "0")}
-              </div>
-              <div style={{ color: "#374151", fontSize: 10, letterSpacing: 4 }}>KM/H</div>
+              <div style={{ color: "#a8b3c2", fontSize: 10, letterSpacing: 2 }}>VELOCIDADE</div>
+                <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 78, fontWeight: 700, color: "#e8eaed", lineHeight: 1 }}>
+                  {Math.round(car.speed).toString().padStart(3, "0")}
+                </div>
+                <div style={{ color: "#a8b3c2", fontSize: 10, letterSpacing: 4 }}>KM/H</div>
+                <div style={{ marginTop: 8, color: car.throttle === 0 || car.pitLimiter || Math.abs(currentCurve) > 0.28 ? "#f59e0b" : "#22c55e", fontSize: 9, letterSpacing: 1.2 }}>
+                  {speedReason}
+                </div>
             </div>
 
             {/* GEAR */}
             <div className="text-center">
-              <div style={{ color: "#374151", fontSize: 10, letterSpacing: 2 }}>MARCHA</div>
+              <div style={{ color: "#a8b3c2", fontSize: 10, letterSpacing: 2 }}>MARCHA</div>
               <div style={{
-                fontSize: 100, fontWeight: 700, lineHeight: 1, color: "#e8230a",
+                fontSize: 112, fontWeight: 700, lineHeight: 1, color: "#e8230a",
                 textShadow: "0 0 40px rgba(232,35,10,0.5)",
               }}>
                 {car.gear}
@@ -960,7 +1063,7 @@ export default function App() {
 
             {/* RPM Text */}
             <div className="text-center">
-              <div style={{ color: "#374151", fontSize: 10, letterSpacing: 2 }}>RPM</div>
+              <div style={{ color: "#a8b3c2", fontSize: 10, letterSpacing: 2 }}>RPM</div>
               <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 22, fontWeight: 700, color: car.rpm > 12000 ? "#e8230a" : "#e8eaed" }}>
                 {Math.round(car.rpm / 100) * 100}
               </div>
@@ -968,7 +1071,7 @@ export default function App() {
 
             {/* G-FORCE */}
             <div>
-              <div style={{ color: "#374151", fontSize: 10, letterSpacing: 2, marginBottom: 4 }}>G-FORCE</div>
+              <div style={{ color: "#a8b3c2", fontSize: 10, letterSpacing: 2, marginBottom: 4 }}>G-FORCE</div>
               <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 28, fontWeight: 700, color: car.gForce > 3 ? "#ef4444" : "#e8eaed" }}>
                 {car.gForce.toFixed(1)}G
               </div>
@@ -979,18 +1082,18 @@ export default function App() {
 
             {/* TYRE TEMP */}
             <div>
-              <div style={{ color: "#374151", fontSize: 10, letterSpacing: 2, marginBottom: 4 }}>PNEU</div>
+              <div style={{ color: "#a8b3c2", fontSize: 10, letterSpacing: 2, marginBottom: 4 }}>PNEU</div>
               <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 28, fontWeight: 700, color: tyreColor }}>
                 {Math.round(car.tyreTemp)}°C
               </div>
-              <div style={{ fontSize: 9, color: "#374151" }}>
+              <div style={{ fontSize: 9, color: "#a8b3c2" }}>
                 {car.tyreTemp < 60 ? "FRIO" : car.tyreTemp < 90 ? "ÓTIMO" : car.tyreTemp < 105 ? "QUENTE" : "CRÍTICO"}
               </div>
             </div>
 
             {/* FUEL */}
             <div>
-              <div style={{ color: "#374151", fontSize: 10, letterSpacing: 2, marginBottom: 4 }}>COMBUSTÍVEL</div>
+              <div style={{ color: "#a8b3c2", fontSize: 10, letterSpacing: 2, marginBottom: 4 }}>COMBUSTÍVEL</div>
               <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 24, fontWeight: 700, color: car.fuel < 20 ? "#ef4444" : "#e8eaed" }}>
                 {car.fuel.toFixed(1)}%
               </div>
@@ -1009,14 +1112,14 @@ export default function App() {
                   flex: 1, padding: "4px 0", textAlign: "center", borderRadius: 3,
                   background: car.drs ? "#22c55e22" : "#111",
                   border: `1px solid ${car.drs ? "#22c55e" : "#222"}`,
-                  color: car.drs ? "#22c55e" : "#333",
+                  color: car.drs ? "#22c55e" : "#b8c4d0",
                   fontSize: 10, fontWeight: 700,
                 }}>DRS</div>
                 <div style={{
                   flex: 1, padding: "4px 0", textAlign: "center", borderRadius: 3,
                   background: car.pitLimiter ? "#f59e0b22" : "#111",
                   border: `1px solid ${car.pitLimiter ? "#f59e0b" : "#222"}`,
-                  color: car.pitLimiter ? "#f59e0b" : "#333",
+                  color: car.pitLimiter ? "#f59e0b" : "#b8c4d0",
                   fontSize: 10, fontWeight: 700,
                 }}>PIT</div>
               </div>
@@ -1028,7 +1131,7 @@ export default function App() {
                 onClick={() => setCockpitState("PAUSED")}
                 style={{
                   background: "#111", border: "1px solid #1e2a38", borderRadius: 4,
-                  color: "#64748b", fontSize: 11, fontWeight: 700, padding: "6px 0",
+                  color: "#a8b3c2", fontSize: 11, fontWeight: 700, padding: "6px 0",
                   cursor: "pointer", letterSpacing: 2,
                 }}
               >
@@ -1041,7 +1144,7 @@ export default function App() {
         {/* BOTTOM: RPM BAR (full width) */}
         <div className="flex-shrink-0 px-4 py-3" style={{ background: "rgba(0,0,0,0.6)", borderTop: "1px solid #1e2a38" }}>
           <div className="flex items-center gap-3">
-            <span style={{ color: "#374151", fontSize: 10, letterSpacing: 2, minWidth: 28 }}>RPM</span>
+            <span style={{ color: "#a8b3c2", fontSize: 10, letterSpacing: 2, minWidth: 28 }}>RPM</span>
             <div className="flex-1 relative h-5 rounded overflow-hidden" style={{ background: "#111" }}>
               <div
                 className="h-full transition-all"
