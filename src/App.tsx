@@ -1036,7 +1036,7 @@ export default function App() {
             )}
 
             {/* KEYBOARD CONTROLS */}
-            <div className="mt-2 flex flex-col items-center gap-1.5">
+            <div className="keyboard-controls mt-2 flex flex-col items-center gap-1.5">
               <div style={{ color: "#94a3b8", fontSize: 10, letterSpacing: 2, marginBottom: 2 }}>CONTROLE DO VEÍCULO</div>
               <div className="flex justify-center">
                 <Key label="W▲" active={keysRef.current.up} />

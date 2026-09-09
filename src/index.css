@@ -215,6 +215,10 @@ body,
     margin-top: 2px !important;
   }
 
+  .keyboard-controls {
+    display: none !important;
+  }
+
   .touch-controls {
     display: grid;
     grid-template-columns: repeat(4, minmax(48px, 1fr));
