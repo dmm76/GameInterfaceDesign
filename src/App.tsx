@@ -710,7 +710,7 @@ export default function App() {
       window.removeEventListener("blur", clearKeys);
       document.removeEventListener("visibilitychange", clearKeys);
     };
-  }, [motionEnabled]);
+  }, []);
 
   // Physics loop
   const runPhysics = useCallback((ts: number) => {
@@ -724,9 +724,8 @@ export default function App() {
     // Inputs
     const throttleInput = k.up ? 1 : 0;
     const brakeInput = k.down ? 1 : 0;
-    const steerInput = motionEnabled
-      ? motionTiltRef.current
-      : (k.left ? -1 : k.right ? 1 : 0);
+    const touchSteer = k.left ? -1 : k.right ? 1 : 0;
+    const steerInput = touchSteer !== 0 ? touchSteer : (motionEnabled ? motionTiltRef.current : 0);
     const lateralOffset = 0;
 
     // Manual paddle shifting — apply any pending edge-triggered shifts
@@ -825,7 +824,7 @@ export default function App() {
     carRef.current = next;
     setCar(next);
     rafRef.current = requestAnimationFrame(runPhysics);
-  }, []);
+  }, [motionEnabled]);
 
   // Start/stop physics loop
   useEffect(() => {
