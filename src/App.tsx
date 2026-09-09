@@ -657,6 +657,7 @@ export default function App() {
   const [cockpitState, setCockpitState] = useState<CockpitState>("STANDBY");
   const [validationStep, setValidationStep] = useState(0);
   const [motionEnabled, setMotionEnabled] = useState(false);
+  const [motionTilt, setMotionTilt] = useState(0);
   const [car, setCar] = useState<CarState>(INIT_CAR);
   const keysRef = useRef<Keys>({ up: false, down: false, left: false, right: false, shift: false, ctrl: false, space: false, d: false });
   const motionTiltRef = useRef(0);
@@ -885,7 +886,9 @@ export default function App() {
   useEffect(() => {
     if (!motionEnabled) return;
     const onOrientation = (event: DeviceOrientationEvent) => {
-      motionTiltRef.current = clamp(event.gamma ?? 0, -32, 32) / 32;
+      const tilt = clamp(event.gamma ?? 0, -32, 32) / 32;
+      motionTiltRef.current = tilt;
+      setMotionTilt(tilt);
     };
     window.addEventListener("deviceorientation", onOrientation);
     return () => window.removeEventListener("deviceorientation", onOrientation);
@@ -1057,10 +1060,10 @@ export default function App() {
               <button className={`motion-toggle ${motionEnabled ? "active" : ""}`} onClick={enableMotion}>
                 {motionEnabled ? "GIROSCÓPIO ATIVO" : "ATIVAR GIROSCÓPIO"}
               </button>
-              <button onPointerDown={() => touchKey("left", true)} onPointerUp={() => touchKey("left", false)} onPointerCancel={() => touchKey("left", false)}>◀</button>
+              <button className={`steer-left ${motionTilt < -0.08 ? "gyro-lit" : ""}`} onPointerDown={() => touchKey("left", true)} onPointerUp={() => touchKey("left", false)} onPointerCancel={() => touchKey("left", false)}>◀</button>
               <button className="touch-brake" onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); touchKey("down", true); }} onPointerUp={() => touchKey("down", false)} onPointerCancel={() => touchKey("down", false)}>FREAR</button>
               <button className="touch-gas" onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); touchKey("up", true); }} onPointerUp={() => touchKey("up", false)} onPointerCancel={() => touchKey("up", false)}>ACELERAR</button>
-              <button onPointerDown={() => touchKey("right", true)} onPointerUp={() => touchKey("right", false)} onPointerCancel={() => touchKey("right", false)}>▶</button>
+              <button className={`steer-right ${motionTilt > 0.08 ? "gyro-lit" : ""}`} onPointerDown={() => touchKey("right", true)} onPointerUp={() => touchKey("right", false)} onPointerCancel={() => touchKey("right", false)}>▶</button>
               <button onClick={() => { pendingShiftRef.current = -1; }}>− MARCHA</button>
               <button onClick={() => { pendingShiftRef.current = 1; }}>+ MARCHA</button>
             </div>
