@@ -317,12 +317,12 @@ function StateOverlay({ state, step, onAction }: { state: CockpitState; step: nu
 
   return (
     <div
-      className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-6"
+      className="state-overlay absolute inset-0 z-30 flex flex-col items-center justify-center gap-6"
       style={{ background: "rgba(8,10,12,0.92)", backdropFilter: "blur(4px)" }}
     >
       <div className="text-center">
         <div
-          className="font-display font-bold mb-2"
+          className="state-title font-display font-bold mb-2"
           style={{ fontSize: 42, color: cfg.color, textShadow: `0 0 40px ${cfg.color}66`, letterSpacing: 4 }}
         >
           {cfg.title}
@@ -362,7 +362,7 @@ function StateOverlay({ state, step, onAction }: { state: CockpitState; step: nu
         </button>
       )}
 
-      <div className="font-mono text-xs" style={{ color: "#a8b3c2" }}>
+      <div className="state-credit font-mono text-xs" style={{ color: "#a8b3c2" }}>
         SENAI · Mecatrônica · Prof. Aurimar · Douglas · Deni · Gabriela · Gabriel · Lucas · Marcio · Nicolas · Vitor
       </div>
     </div>
@@ -869,6 +869,7 @@ export default function App() {
 
   // Tyre color
   const tyreColor = car.tyreTemp > 100 ? "#ef4444" : car.tyreTemp > 80 ? "#22c55e" : car.tyreTemp > 60 ? "#f59e0b" : "#94a3b8";
+  const touchKey = (key: keyof Keys, pressed: boolean) => { keysRef.current[key] = pressed; };
 
   return (
     <div
@@ -1031,6 +1032,14 @@ export default function App() {
               <div style={{ color: "#a8b3c2", fontSize: 9, letterSpacing: 1, marginTop: 4 }}>
                 Z=DRS · X=PIT LIMITER · E=SUBIR · Q=DESCER
               </div>
+            </div>
+            <div className="touch-controls" onContextMenu={(e) => e.preventDefault()}>
+              <button onPointerDown={() => touchKey("left", true)} onPointerUp={() => touchKey("left", false)} onPointerCancel={() => touchKey("left", false)}>◀</button>
+              <button className="touch-brake" onPointerDown={() => touchKey("down", true)} onPointerUp={() => touchKey("down", false)} onPointerCancel={() => touchKey("down", false)}>FREAR</button>
+              <button className="touch-gas" onPointerDown={() => touchKey("up", true)} onPointerUp={() => touchKey("up", false)} onPointerCancel={() => touchKey("up", false)}>ACELERAR</button>
+              <button onPointerDown={() => touchKey("right", true)} onPointerUp={() => touchKey("right", false)} onPointerCancel={() => touchKey("right", false)}>▶</button>
+              <button onClick={() => { pendingShiftRef.current = -1; }}>− MARCHA</button>
+              <button onClick={() => { pendingShiftRef.current = 1; }}>+ MARCHA</button>
             </div>
             </div>
           </div>
