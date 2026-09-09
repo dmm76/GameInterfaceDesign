@@ -1,0 +1,92 @@
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import 'tailwindcss';
+
+html,
+body,
+#root {
+  height: 100%;
+  background: #080a0c;
+}
+
+@theme inline {
+  --color-background: #080a0c;
+  --color-foreground: #e8eaed;
+  --color-card: #0f1318;
+  --color-card-foreground: #e8eaed;
+  --color-primary: #e8230a;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #141a22;
+  --color-secondary-foreground: #94a3b8;
+  --color-muted: #1a2130;
+  --color-muted-foreground: #64748b;
+  --color-accent: #ff6b00;
+  --color-accent-foreground: #ffffff;
+  --color-border: #1e2a38;
+  --color-ring: #e8230a;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+
+  --font-display: 'Rajdhani', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.font-display { font-family: var(--font-display); }
+.font-body { font-family: var(--font-body); }
+.font-mono { font-family: var(--font-mono); }
+
+/* carbon fibre panel texture */
+.carbon {
+  background-color: #0f1318;
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 2px,
+      rgba(255,255,255,0.015) 2px,
+      rgba(255,255,255,0.015) 4px
+    );
+}
+
+/* rpm gradient bar */
+.rpm-fill {
+  background: linear-gradient(90deg, #22c55e 0%, #f59e0b 60%, #e8230a 85%, #ff00ff 100%);
+}
+
+/* glowing border for active state */
+.glow-red {
+  box-shadow: 0 0 0 1px #e8230a, 0 0 16px rgba(232,35,10,0.35);
+}
+.glow-green {
+  box-shadow: 0 0 0 1px #22c55e, 0 0 14px rgba(34,197,94,0.3);
+}
+.glow-amber {
+  box-shadow: 0 0 0 1px #f59e0b, 0 0 14px rgba(245,158,11,0.3);
+}
+
+/* pulsing dot */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.pulse { animation: pulse-dot 1.2s ease-in-out infinite; }
+
+/* rev counter needle */
+@keyframes sweep { from { transform: rotate(-135deg); } to { transform: rotate(135deg); } }
+
+/* scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #1e2a38; border-radius: 2px; }
+
+/* sector indicator flash */
+@keyframes sector-flash {
+  0%, 100% { background: #f59e0b; }
+  50% { background: #ff6b00; }
+}
+.sector-flash { animation: sector-flash 0.6s ease-in-out 3; }
