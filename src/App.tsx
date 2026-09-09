@@ -872,7 +872,7 @@ export default function App() {
 
   return (
     <div
-      className="relative w-full h-full overflow-hidden select-none"
+      className="app-shell relative w-full h-full overflow-hidden select-none"
       style={{ background: "#080a0c", fontFamily: "'Rajdhani',sans-serif" }}
     >
       {/* ── BG CARBON TEXTURE ── */}
@@ -882,11 +882,11 @@ export default function App() {
       }} />
 
       {/* ── MAIN LAYOUT ── */}
-      <div className="relative z-10 w-full h-full flex flex-col" style={{ minHeight: "100vh" }}>
+      <div className="main-layout relative z-10 w-full h-full flex flex-col" style={{ minHeight: "100vh" }}>
 
         {/* TOP HUD BAR */}
         <div
-          className="flex items-center justify-between px-6 py-2 flex-shrink-0"
+          className="top-hud flex items-center justify-between px-6 py-2 flex-shrink-0"
           style={{ background: "rgba(0,0,0,0.7)", borderBottom: "1px solid #1e2a38" }}
         >
           {/* LAP TIMES */}
@@ -944,10 +944,10 @@ export default function App() {
         </div>
 
         {/* MIDDLE SECTION */}
-        <div className="flex flex-1 overflow-hidden" style={{ minHeight: 0 }}>
+        <div className="middle-section flex flex-1 overflow-hidden" style={{ minHeight: 0 }}>
 
           {/* LEFT COLUMN: Pedals + Sensors */}
-          <div className="flex flex-col justify-between p-2 gap-3 flex-shrink-0 carbon" style={{ width: 190, borderRight: "1px solid #1e2a38" }}>
+          <div className="left-panel flex flex-col justify-between p-2 gap-3 flex-shrink-0 carbon" style={{ width: 190, borderRight: "1px solid #1e2a38" }}>
 
             {/* MINI MAP */}
             <div>
@@ -989,16 +989,16 @@ export default function App() {
           </div>
 
           {/* CENTER: COCKPIT DIAGRAM + WHEEL */}
-          <div className="flex-1 flex items-center justify-center relative gap-14 overflow-hidden px-6" style={{ minHeight: 0, background: "radial-gradient(ellipse at 50% 42%, rgba(30,42,56,0.22), transparent 62%)" }}>
+          <div className="center-panel flex-1 flex items-center justify-center relative gap-14 overflow-hidden px-6" style={{ minHeight: 0, background: "radial-gradient(ellipse at 50% 42%, rgba(30,42,56,0.22), transparent 62%)" }}>
 
             {/* REALISTIC COCKPIT + SENSOR MAP */}
-            <div className="flex flex-col items-center flex-shrink-0 rounded" style={{ minWidth: 390, padding: "12px 16px", border: "1px solid #263444", background: "rgba(8,12,17,0.55)" }}>
+            <div className="sensor-card flex flex-col items-center flex-shrink-0 rounded" style={{ minWidth: 390, padding: "12px 16px", border: "1px solid #263444", background: "rgba(8,12,17,0.55)" }}>
               <div style={{ color: "#a8b3c2", fontSize: 10, letterSpacing: 2, marginBottom: 2 }}>MAPA DE SENSORES</div>
               <CockpitDiagram car={car} state={cockpitState} step={validationStep} />
             </div>
 
             {/* WHEEL + CONTROLS */}
-            <div className="flex flex-col items-center justify-center gap-3 rounded" style={{ minWidth: 390, padding: "18px 20px", border: "1px solid #263444", background: "rgba(8,12,17,0.55)" }}>
+            <div className="wheel-card flex flex-col items-center justify-center gap-3 rounded" style={{ minWidth: 390, padding: "18px 20px", border: "1px solid #263444", background: "rgba(8,12,17,0.55)" }}>
 
             {/* STEERING WHEEL */}
             <SteeringWheel angle={car.steerAngle} rpm={car.rpm} gear={car.gear} speed={car.speed} drs={car.drs} pitLimiter={car.pitLimiter} />
@@ -1036,7 +1036,7 @@ export default function App() {
           </div>
 
           {/* RIGHT COLUMN: Speed + Gear + G + Fuel */}
-          <div className="flex flex-col justify-between p-5 gap-4 flex-shrink-0 carbon" style={{ width: 220, borderLeft: "1px solid #1e2a38" }}>
+          <div className="right-panel flex flex-col justify-between p-5 gap-4 flex-shrink-0 carbon" style={{ width: 220, borderLeft: "1px solid #1e2a38" }}>
 
             {/* SPEED */}
             <div className="text-center">
@@ -1138,6 +1138,19 @@ export default function App() {
                 ⏸ PAUSAR
               </button>
             )}
+
+            <button
+              onClick={() => {
+                if (window.confirm("Sair do jogo e voltar ao início?")) setCockpitState("STANDBY");
+              }}
+              style={{
+                background: "#1a0d0d", border: "1px solid #7f1d1d", borderRadius: 4,
+                color: "#fca5a5", fontSize: 11, fontWeight: 700, padding: "8px 0",
+                cursor: "pointer", letterSpacing: 1.5,
+              }}
+            >
+              SAIR DO JOGO
+            </button>
           </div>
         </div>
 
