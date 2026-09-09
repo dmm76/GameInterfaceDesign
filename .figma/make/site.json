@@ -1,5 +1,6 @@
 {
-  "description": "This interactive web application offers a user-friendly gaming interface designed for project requirements, enhancing engagement and user experience.",
+  "title": "TURMA DE MECATRÔNICA DO SENAI - CTM TEMECA32",
+  "description": "Simulador Smart Race Cockpit da turma de Mecatrônica do SENAI - CTM TEMECA32.",
   "robots": {
     "index": false
   },
