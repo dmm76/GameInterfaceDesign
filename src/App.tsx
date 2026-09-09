@@ -710,7 +710,7 @@ export default function App() {
       window.removeEventListener("blur", clearKeys);
       document.removeEventListener("visibilitychange", clearKeys);
     };
-  }, []);
+  }, [motionEnabled]);
 
   // Physics loop
   const runPhysics = useCallback((ts: number) => {
