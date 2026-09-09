@@ -1025,11 +1025,11 @@ export default function App() {
                 <Key label="►D" active={keysRef.current.right} />
               </div>
               <div className="flex gap-1 mt-1">
-                <Key label="SHIFT ▲" active={keysRef.current.shift} wide />
-                <Key label="CTRL ▼" active={keysRef.current.ctrl} wide />
+                <Key label="E ▲" active={keysRef.current.shift} wide />
+                <Key label="Q ▼" active={keysRef.current.ctrl} wide />
               </div>
               <div style={{ color: "#a8b3c2", fontSize: 9, letterSpacing: 1, marginTop: 4 }}>
-                Z=DRS · X=PIT LIMITER · SHIFT=SUBIR · CTRL=DESCER
+                Z=DRS · X=PIT LIMITER · E=SUBIR · Q=DESCER
               </div>
             </div>
             </div>
