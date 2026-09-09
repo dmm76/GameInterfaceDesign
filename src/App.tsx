@@ -656,6 +656,7 @@ const INIT_CAR: CarState = {
 export default function App() {
   const [cockpitState, setCockpitState] = useState<CockpitState>("STANDBY");
   const [validationStep, setValidationStep] = useState(0);
+  const [motionEnabled, setMotionEnabled] = useState(false);
   const [car, setCar] = useState<CarState>(INIT_CAR);
   const keysRef = useRef<Keys>({ up: false, down: false, left: false, right: false, shift: false, ctrl: false, space: false, d: false });
   const carRef = useRef<CarState>(INIT_CAR);
@@ -870,6 +871,25 @@ export default function App() {
   // Tyre color
   const tyreColor = car.tyreTemp > 100 ? "#ef4444" : car.tyreTemp > 80 ? "#22c55e" : car.tyreTemp > 60 ? "#f59e0b" : "#94a3b8";
   const touchKey = (key: keyof Keys, pressed: boolean) => { keysRef.current[key] = pressed; };
+  const enableMotion = async () => {
+    const orientation = DeviceOrientationEvent as typeof DeviceOrientationEvent & { requestPermission?: () => Promise<string> };
+    if (orientation.requestPermission) {
+      const permission = await orientation.requestPermission();
+      if (permission !== "granted") return;
+    }
+    setMotionEnabled(true);
+  };
+
+  useEffect(() => {
+    if (!motionEnabled) return;
+    const onOrientation = (event: DeviceOrientationEvent) => {
+      const tilt = event.gamma ?? 0;
+      keysRef.current.left = tilt < -8;
+      keysRef.current.right = tilt > 8;
+    };
+    window.addEventListener("deviceorientation", onOrientation);
+    return () => window.removeEventListener("deviceorientation", onOrientation);
+  }, [motionEnabled]);
 
   return (
     <div
@@ -1034,6 +1054,9 @@ export default function App() {
               </div>
             </div>
             <div className="touch-controls" onContextMenu={(e) => e.preventDefault()}>
+              <button className={`motion-toggle ${motionEnabled ? "active" : ""}`} onClick={enableMotion}>
+                {motionEnabled ? "GIROSCÓPIO ATIVO" : "ATIVAR GIROSCÓPIO"}
+              </button>
               <button onPointerDown={() => touchKey("left", true)} onPointerUp={() => touchKey("left", false)} onPointerCancel={() => touchKey("left", false)}>◀</button>
               <button className="touch-brake" onPointerDown={() => touchKey("down", true)} onPointerUp={() => touchKey("down", false)} onPointerCancel={() => touchKey("down", false)}>FREAR</button>
               <button className="touch-gas" onPointerDown={() => touchKey("up", true)} onPointerUp={() => touchKey("up", false)} onPointerCancel={() => touchKey("up", false)}>ACELERAR</button>

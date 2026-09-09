@@ -231,10 +231,12 @@ body,
   }
   .touch-controls button:active { transform: translateY(2px); background: #263444; }
   .touch-controls .touch-brake { border-color: #991b1b; color: #fca5a5; }
-  .touch-controls button:nth-child(1) { grid-column: 1; }
-  .touch-controls button:nth-child(2) { grid-column: 2; }
-  .touch-controls button:nth-child(3) { grid-column: 3; }
-  .touch-controls button:nth-child(4) { grid-column: 4; }
+  .touch-controls .motion-toggle { grid-column: 1 / -1; border-color: #475569; color: #cbd5e1; }
+  .touch-controls .motion-toggle.active { border-color: #22c55e; color: #86efac; background: #052e16; }
+  .touch-controls button:nth-child(2) { grid-column: 1; }
+  .touch-controls button:nth-child(3) { grid-column: 2; }
+  .touch-controls button:nth-child(4) { grid-column: 3; }
+  .touch-controls button:nth-child(5) { grid-column: 4; }
   .touch-controls .touch-gas { border-color: #15803d; color: #86efac; }
   .touch-controls button:nth-last-child(2) { grid-column: 1 / span 2; }
   .touch-controls button:last-child { grid-column: 3 / span 2; }
