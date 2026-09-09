@@ -659,6 +659,7 @@ export default function App() {
   const [motionEnabled, setMotionEnabled] = useState(false);
   const [car, setCar] = useState<CarState>(INIT_CAR);
   const keysRef = useRef<Keys>({ up: false, down: false, left: false, right: false, shift: false, ctrl: false, space: false, d: false });
+  const motionTiltRef = useRef(0);
   const carRef = useRef<CarState>(INIT_CAR);
   // Guarda somente a última troca solicitada. Assim, um acionamento do paddle
   // nunca acumula várias marchas para serem aplicadas no mesmo frame.
@@ -723,7 +724,9 @@ export default function App() {
     // Inputs
     const throttleInput = k.up ? 1 : 0;
     const brakeInput = k.down ? 1 : 0;
-    const steerInput = k.left ? -1 : k.right ? 1 : 0;
+    const steerInput = motionEnabled
+      ? motionTiltRef.current
+      : (k.left ? -1 : k.right ? 1 : 0);
     const lateralOffset = 0;
 
     // Manual paddle shifting — apply any pending edge-triggered shifts
@@ -883,9 +886,7 @@ export default function App() {
   useEffect(() => {
     if (!motionEnabled) return;
     const onOrientation = (event: DeviceOrientationEvent) => {
-      const tilt = event.gamma ?? 0;
-      keysRef.current.left = tilt < -8;
-      keysRef.current.right = tilt > 8;
+      motionTiltRef.current = clamp(event.gamma ?? 0, -32, 32) / 32;
     };
     window.addEventListener("deviceorientation", onOrientation);
     return () => window.removeEventListener("deviceorientation", onOrientation);
@@ -1058,8 +1059,8 @@ export default function App() {
                 {motionEnabled ? "GIROSCÓPIO ATIVO" : "ATIVAR GIROSCÓPIO"}
               </button>
               <button onPointerDown={() => touchKey("left", true)} onPointerUp={() => touchKey("left", false)} onPointerCancel={() => touchKey("left", false)}>◀</button>
-              <button className="touch-brake" onPointerDown={() => touchKey("down", true)} onPointerUp={() => touchKey("down", false)} onPointerCancel={() => touchKey("down", false)}>FREAR</button>
-              <button className="touch-gas" onPointerDown={() => touchKey("up", true)} onPointerUp={() => touchKey("up", false)} onPointerCancel={() => touchKey("up", false)}>ACELERAR</button>
+              <button className="touch-brake" onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); touchKey("down", true); }} onPointerUp={() => touchKey("down", false)} onPointerCancel={() => touchKey("down", false)}>FREAR</button>
+              <button className="touch-gas" onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); touchKey("up", true); }} onPointerUp={() => touchKey("up", false)} onPointerCancel={() => touchKey("up", false)}>ACELERAR</button>
               <button onPointerDown={() => touchKey("right", true)} onPointerUp={() => touchKey("right", false)} onPointerCancel={() => touchKey("right", false)}>▶</button>
               <button onClick={() => { pendingShiftRef.current = -1; }}>− MARCHA</button>
               <button onClick={() => { pendingShiftRef.current = 1; }}>+ MARCHA</button>
